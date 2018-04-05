@@ -98,7 +98,12 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
   // UPDATE: A parallel collection can be checkpointed to HDFS, which achieves this goal.
 
   override def getPartitions: Array[Partition] = {
-    val slices = ParallelCollectionRDD.slice(data, numSlices).toArray
+    var slices:Array[Seq[T]] = null
+    if (!opted) {
+      slices = ParallelCollectionRDD.slice(data, numSlices).toArray
+    } else {
+      slices = ParallelCollectionRDD.slice(data, sc).toArray
+    }
     slices.indices.map(i => new ParallelCollectionPartition(id, i, slices(i))).toArray
   }
 
@@ -110,6 +115,8 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
   // executor -> num of tokens mapping, or [host] is enough if we use host -> num of tokens
   // mapping.
   override def optRepartition(): RDD[T] = {
+    opted = true
+
     // delete the following line when implementing.
     // TODO(ata): change the behavior of getPartitions(), maybe set var opted to true, and add
     // if(opted) {} clause so that it can call a different overloaded
@@ -175,5 +182,12 @@ private object ParallelCollectionRDD {
             array.slice(start, end).toSeq
         }.toSeq
     }
+  }
+
+  def slice[T: ClassTag](seq: Seq[T], sc: SparkContext): Seq[Seq[T]] = {
+    val executorTokens = sc.executorTokens
+    // Here we do the partition based on the values in executorTokens.
+
+
   }
 }
