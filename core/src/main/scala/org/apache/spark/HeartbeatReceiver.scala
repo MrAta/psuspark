@@ -171,7 +171,10 @@ private[spark] class HeartbeatReceiver(sc: SparkContext, clock: Clock)
     * If the heartbeat receiver is not stopped, notify it of executor registrations.
     */
   override def onExecutorAdded(executorAdded: SparkListenerExecutorAdded): Unit = {
+
 //    sc.addExecutorToken(executorAdded.executorId, 0) // What is the numner of Initial tokens here?
+
+
     addExecutor(executorAdded.executorId)
   }
 
@@ -196,6 +199,7 @@ private[spark] class HeartbeatReceiver(sc: SparkContext, clock: Clock)
     * and expire it with loud error messages.
     */
   override def onExecutorRemoved(executorRemoved: SparkListenerExecutorRemoved): Unit = {
+    sc.removeExecutorToken(executorRemoved.executorId)
     removeExecutor(executorRemoved.executorId)
   }
 
@@ -234,3 +238,4 @@ private[spark] class HeartbeatReceiver(sc: SparkContext, clock: Clock)
 private[spark] object HeartbeatReceiver {
   val ENDPOINT_NAME = "HeartbeatReceiver"
 }
+
