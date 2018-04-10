@@ -18,13 +18,13 @@
 package org.apache.spark.rdd
 
 import java.io._
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 
 import scala.Serializable
 import scala.collection.Map
 import scala.collection.immutable.NumericRange
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
-
 import org.apache.spark._
 import org.apache.spark.serializer.JavaSerializer
 import org.apache.spark.util.Utils
@@ -92,6 +92,12 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
   // getPreferedLocations
   private var opted = false
 
+  // optimized prefered locations
+  private var optLocationPrefs = locationPrefs
+
+  // Identify locations of executors with this prefix.
+  val executorLocationTag = "executor_"
+
   // TODO: Right now, each split sends along its full data, even if later down the RDD chain it gets
   // cached. It might be worthwhile to write the data to a file in the DFS and read it in the split
   // instead.
@@ -116,6 +122,17 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
 
     // TODO(nader): don't forget to update locationPrefs, using sc.executorTokens
     // (and maybe sc.executorToHost).
+
+    // TODO: sort Array based on order of partition
+    var availableArray = sc.executorTokens.keySet().toArray()
+
+    // after the array is sorted, assign each partition to an availabe executor
+    for ((partID, location) <- locationPrefs) {
+        var exec = availableArray.head
+        var execHost = sc.executorToHost.get(exec)
+        optLocationPrefs = optLocationPrefs.updated(partID, Seq(executorLocationTag,partID.toString()))
+        availableArray = availableArray.drop(1)
+    }
   }
 
   override def compute(s: Partition, context: TaskContext): Iterator[T] = {
@@ -123,7 +140,11 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
   }
 
   override def getPreferredLocations(s: Partition): Seq[String] = {
-    locationPrefs.getOrElse(s.index, Nil)
+    if(opted) {
+      locationPrefs.getOrElse(s.index, Nil)
+    }else{
+      optLocationPrefs.getOrElse(s.index,Nil)
+    }
   }
 }
 
