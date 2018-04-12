@@ -140,7 +140,7 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
   }
 
   override def getPreferredLocations(s: Partition): Seq[String] = {
-    if(opted) {
+    if(!opted) {
       locationPrefs.getOrElse(s.index, Nil)
     }else{
       optLocationPrefs.getOrElse(s.index,Nil)
