@@ -142,9 +142,9 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
 
     // after the array is sorted, assign each partition to an availabe executor
     for ((partID, location) <- locationPrefs) {
-      var exec = availableArray.get(0)
-      var execHost = sc.executorToHost.get(exec)
-      optLocationPrefs = optLocationPrefs.updated(partID, Seq(executorLocationTag,partID.toString()))
+      var execID = availableArray.get(0)
+      var execHost = sc.executorToHost.get(execID)
+      optLocationPrefs = optLocationPrefs.updated(partID, Seq(execHost))
       availableArray.remove(0)
     }
 
