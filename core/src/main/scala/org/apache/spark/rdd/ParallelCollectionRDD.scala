@@ -19,6 +19,8 @@ package org.apache.spark.rdd
 
 import java.io._
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
+import java.util.ArrayList
+import java.util.Comparator
 
 import scala.Serializable
 import scala.collection.Map
@@ -123,16 +125,29 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
     // TODO(nader): don't forget to update locationPrefs, using sc.executorTokens
     // (and maybe sc.executorToHost).
 
-    // TODO: sort Array based on order of partition
-    var availableArray = sc.executorTokens.keySet().toArray()
+    //create an ArrayList of class ExecutorPair
+    class ExecutorPair(val executorId: String, val tokens: Int)
+    var availableArray = new ArrayList[ExecutorPair]()
+    for (exeID <- sc.executorTokens.keySet().toArray()){
+      var exeIDasString = exeID.asInstanceOf[String]
+      availableArray.add(new ExecutorPair(exeIDasString, sc.executorTokens.get(exeIDasString)))
+    }
+
+    //sort availabeArray in ascending order
+    java.util.Collections.sort(availableArray, new java.util.Comparator[ExecutorPair]{
+      override def compare(p1:ExecutorPair, p2:ExecutorPair) = {
+        p1.tokens - p2.tokens
+      }
+    })
 
     // after the array is sorted, assign each partition to an availabe executor
     for ((partID, location) <- locationPrefs) {
-        var exec = availableArray.head
-        var execHost = sc.executorToHost.get(exec)
-        optLocationPrefs = optLocationPrefs.updated(partID, Seq(executorLocationTag,partID.toString()))
-        availableArray = availableArray.drop(1)
+      var exec = availableArray.get(0)
+      var execHost = sc.executorToHost.get(exec)
+      optLocationPrefs = optLocationPrefs.updated(partID, Seq(executorLocationTag,partID.toString()))
+      availableArray.remove(0)
     }
+
   }
 
   override def compute(s: Partition, context: TaskContext): Iterator[T] = {
