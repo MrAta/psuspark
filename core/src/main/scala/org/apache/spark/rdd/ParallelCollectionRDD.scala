@@ -140,7 +140,7 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
     for (exeID <- sc.executorTokens.keySet().toArray()) {
       val exeIDasString = exeID.asInstanceOf[String]
       availableArray = availableArray :+ ExecutorPair(
-        exeIDasString, sc.executorTokens.get(exeIDasString))
+        exeIDasString, sc.executorTokens.get(exeIDasString)._1)
     }
 
     // sort availabeArray in ascending order
@@ -230,11 +230,18 @@ private object ParallelCollectionRDD {
     }
     // Sequences need to be sliced at the same set of index positions for operations
     // like RDD.zip() to behave as expected
-
     val tokens = executorTokens.values().toArray.map {i =>
-      val tmp = i.asInstanceOf[Int]
-      if (tmp - 15 > 0) tmp - 15 else 0
-    }.sorted
+      val tmp = i.asInstanceOf[(Int, String)]._1
+      if (i.asInstanceOf[(Int, String)]._1 - 15 > 0) {
+        (i.asInstanceOf[(Int, String)]._1 - 15, i.asInstanceOf[(Int, String)]._2)
+      }
+      else
+        {
+          (0, i.asInstanceOf[(Int, String)]._2)
+        }
+
+
+      }.sorted
 
     val numSlices = executorTokens.values().size()
     val pi = numSlices // Total amount of work done by single node single vCPU
@@ -243,19 +250,39 @@ private object ParallelCollectionRDD {
     // for a certain AWS instance (t2.medium) and need to change if using other types
     // of instances. So we need to let our code to automatically detect instance type
     // and adaptively change the baseline performance.
-    val bf = 0.4
+    // val bf = 0.4
+
+    def bf(instanceType: String): Double = {
+      instanceType match {
+        case "t2.nano" => 0.05
+        case "t2.micro" => 0.1
+        case "t2.small" => 0.2
+        case "t2.medium" => 0.4
+        case "t2.large" => 0.6
+        case _ => 1.0
+      }
+    }
 
     def solvePieceWise(start: Int, passover: Double, tango: Double): Double = {
-      val slope: Double = tokens.count(_ <= start) * bf + tokens.count(_ > start)
-      val newIndex = tokens.count(_ <= start)
+      var slope: Double = 0.0
+        tokens.foreach(i =>
+          if (i._1 <= start)
+          {
+            slope = slope + bf(i._2)
+          }
+          else {
+            slope = slope + 1
+          }
+        )
+      val newIndex = tokens.count(_._1 <= start)
       if (newIndex == tokens.length) {
         (tango - passover) / slope + start
       } else {
-        val newPassover = slope * (tokens(newIndex) - start) + passover
+        val newPassover = slope * (tokens(newIndex)._1 - start) + passover
         if (newPassover >= tango) {
           (tango - passover) / slope + start
         } else {
-          solvePieceWise(tokens(newIndex), newPassover, tango)
+          solvePieceWise(tokens(newIndex)._1, newPassover, tango)
         }
       }
     }
@@ -263,10 +290,10 @@ private object ParallelCollectionRDD {
     val finTime = solvePieceWise(0, 0.0, pi)
 
     val weights = tokens.map { i =>
-      if (i > finTime) {
+      if (i._1 > finTime) {
         finTime.asInstanceOf[Double]
       } else {
-        i + (finTime - i) * bf
+        i._1 + (finTime - i._1) * bf(i._2)
       }}.toArray.map(_.asInstanceOf[Double])
 
     def positions(length: Long, ws: Array[Double]): Iterator[(Int, Int)] = {

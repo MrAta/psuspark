@@ -151,7 +151,8 @@ private[deploy] object DeployMessages {
 
   // TODO(matei): replace hostPort with host
   case class ExecutorAdded(
-      id: Int, workerId: String, hostPort: String, cores: Int, memory: Int, initToken: Int = 0) {
+      id: Int, workerId: String, hostPort: String, cores: Int, memory: Int, initToken: Int = 0,
+      instanceType: String = "") {
     Utils.checkHostPort(hostPort)
   }
 

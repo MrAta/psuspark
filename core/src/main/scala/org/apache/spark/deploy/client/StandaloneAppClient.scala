@@ -171,12 +171,13 @@ private[spark] class StandaloneAppClient(
         stop()
 
       case ExecutorAdded(
-          id: Int, workerId: String, hostPort: String, cores: Int, memory: Int, initToken: Int) =>
+          id: Int, workerId: String, hostPort: String, cores: Int, memory: Int,
+      initToken: Int, instanceType: String) =>
         val fullId = appId + "/" + id
         // TODO(yuquanshan): give initial tokens to the new executor in sc.
         logInfo("Executor added: %s on %s (%s) with %d core(s) and %d CPU credits".format(
           fullId, workerId, hostPort, cores, initToken))
-        listener.executorAdded(fullId, workerId, hostPort, cores, memory, initToken)
+        listener.executorAdded(fullId, workerId, hostPort, cores, memory, initToken, instanceType)
 
       case ExecutorUpdated(id, state, message, exitStatus, workerLost) =>
         val fullId = appId + "/" + id

@@ -803,16 +803,17 @@ private[spark] class Executor(
       .withDimensions(Arrays.asList(instanceDimension))
       .withEndTime(new Date())
     val result = cw.getMetricStatistics(request)
-    var credits: Int  = 0
+    var credits: Int = 0
     try{
-      credits= result.getDatapoints().get(0).getAverage().toInt
+      credits = result.getDatapoints().get(0).getAverage().toInt
     }
-    catch{
+    catch {
       case _: Throwable => logWarning("No response from AWS CloudWatch")
 
     }
 
-    val message = Heartbeat(executorId, accumUpdates.toArray, env.blockManager.blockManagerId, credits)
+    val message = Heartbeat(executorId, accumUpdates.toArray, env.blockManager.blockManagerId,
+      credits, EC2MetadataUtils.getInstanceType())
     try {
       val response = heartbeatReceiverRef.askSync[HeartbeatResponse](
           message, RpcTimeout(conf, "spark.executor.heartbeatInterval", "10s"))

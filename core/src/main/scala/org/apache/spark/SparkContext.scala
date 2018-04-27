@@ -334,7 +334,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * memory-efficient, and leads to simpler location string format, just [hostname], instead of
    * executor_[host]_[executorid].
    */
-  val executorTokens: ConcurrentMap[String, Int] = new ConcurrentHashMap[String, Int]()
+  val executorTokens: ConcurrentMap[String, (Int, String)] = new ConcurrentHashMap[String, (Int, String)]()
 
   /**
    * The executorId -> hostname map, solely used to create location string if we use
