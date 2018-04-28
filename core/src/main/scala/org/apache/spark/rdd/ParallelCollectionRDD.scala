@@ -259,10 +259,25 @@ private object ParallelCollectionRDD {
         case "t2.small" => 0.2
         case "t2.medium" => 0.4
         case "t2.large" => 0.6
+        case "t2.xlarge" => 0.9
         case _ => 1.0
       }
     }
 
+    // maximum available performance!
+    // see https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/t2-credits-baseline-concepts.html
+
+    def mf(instanceType: String): Double = {
+      instanceType match {
+        case "t2.nano" => 1.0
+        case "t2.micro" => 1.0
+        case "t2.small" => 1.0
+        case "t2.medium" => 2.0
+        case "t2.large" => 2.0
+        case "t2.xlarge" => 4.0
+        case _ => 1.0
+      }
+    }
     def solvePieceWise(start: Int, passover: Double, tango: Double): Double = {
       var slope: Double = 0.0
         tokens.foreach(i =>
@@ -271,7 +286,7 @@ private object ParallelCollectionRDD {
             slope = slope + bf(i._2)
           }
           else {
-            slope = slope + 1
+            slope = slope + mf(i._2)
           }
         )
       val newIndex = tokens.count(_._1 <= start)
