@@ -449,6 +449,7 @@ private[deploy] class Worker(
         if (conf.getBoolean("spark.worker.aws", false)) {
           // Collect tokens of the host instance
           val cw = AmazonCloudWatchClientBuilder.defaultClient()
+          val instanceType = EC2MetadataUtils.getInstanceType()
           val instanceDimension = new Dimension()
           instanceDimension.setName("InstanceId")
           instanceDimension.setValue(EC2MetadataUtils.getInstanceId())
@@ -465,7 +466,7 @@ private[deploy] class Worker(
           var credits: Int = 0
           try {
             val result = cw.getMetricStatistics(request)
-            credits= result.getDatapoints().get(0).getAverage().toInt
+            credits = result.getDatapoints().get(0).getAverage().toInt
             logInfo(s"Got current token $credits.")
           }
           catch {
@@ -474,7 +475,7 @@ private[deploy] class Worker(
                 instanceDimension.getValue() + ": " + e.toString())
               credits = 0
           }
-          sendToMaster(Heartbeat(workerId, self, credits))
+          sendToMaster(Heartbeat(workerId, self, (credits, instanceType)))
         } else {
           logInfo(s"Sending heartbeat to master assuming not running on AWS.")
           sendToMaster(Heartbeat(workerId, self))
