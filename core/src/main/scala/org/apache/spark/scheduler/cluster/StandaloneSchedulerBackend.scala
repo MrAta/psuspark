@@ -153,8 +153,8 @@ private[spark] class StandaloneSchedulerBackend(
   }
 
   override def executorAdded(fullId: String, workerId: String, hostPort: String, cores: Int,
-    memory: Int, tokens: Int, instanceType: String) {
-    sc.executorTokens.put(fullId.split("/")(1), (tokens, instanceType))
+    memory: Int, token_instanceType: (Int, String)) {
+    sc.executorTokens.put(fullId.split("/")(1), token_instanceType)
     sc.executorToHost.put(fullId.split("/")(1), workerId)
     logInfo("Granted executor ID %s on hostPort %s with %d core(s), %s RAM".format(
       fullId, hostPort, cores, Utils.megabytesToString(memory)))

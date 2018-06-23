@@ -86,7 +86,8 @@ private[deploy] object DeployMessages {
       driverIds: Seq[String]) extends DeployMessage
 
   case class Heartbeat(
-      workerId: String, worker: RpcEndpointRef, token_instanceType:(Int, String) = (0,"")) extends DeployMessage
+      workerId: String, worker: RpcEndpointRef,
+      token_instanceType: (Int, String) = (0, "")) extends DeployMessage
 
   // Master to Worker
 
